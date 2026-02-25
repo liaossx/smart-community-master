@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848  # Nacos地址
+      config:
+        server-addr: localhost:8848
+        file-extension: yaml  # 配置文件格式
+    gateway:
+      discovery:
+        locator:
+          enabled: true  # 开启服务名路由（如/user-service/**转发到user-service）
+      routes:
+        # 用户服务路由
+        - id: core-service
+          uri: lb://core-service  # 负载均衡指向Nacos中的服务
+          predicates:
+            - Path=/api/**
+server:
+  port: 80  # 网关端口

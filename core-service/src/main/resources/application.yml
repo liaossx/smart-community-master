@@ -1,0 +1,84 @@
+# application.yml：服务业务配置（端口、数据库、MyBatis-Plus）
+server:
+  port: 8081  # 服务端口（选个不冲突的，比如8081，避免和Nacos（8848）、MySQL（3306）冲突）
+
+spring:
+  # 数据库配置（MVP阶段只连MySQL，其他中间件全砍）
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL 8.0+驱动（5.7用com.mysql.jdbc.Driver）
+    url: jdbc:mysql://192.168.10.101:3306/smart_community?useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8&useSSL=false
+    # 说明：localhost:3306是本地MySQL地址，smart_community是数据库名（你要先在MySQL里新建这个库）
+    username: root  # 你的MySQL账号（本地默认root）
+    password: 1234  # 你的MySQL密码（自己改，比如你本地MySQL密码是123456）
+
+
+  redis:
+    host: 192.168.10.101
+    port: 6379
+    password: 1234
+    timeout: 10000
+    database: 0
+
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: 3000ms
+#  application:
+#    name: core-service  # 服务名（Gateway路由指向这个名称）
+#  cloud:
+#      # Nacos服务发现配置
+#      nacos:
+#        discovery:
+#          server-addr: localhost:8848  # Nacos地址
+#
+#      # Sentinel配置
+#      sentinel:
+#        transport:
+#          dashboard: localhost:8858 # Sentinel Dashboard地址
+#          port: 8719  # 与Dashboard通信端口（默认8719，可自定义）
+#        # 可选：Sentinel其他配置
+#        eager: true  # 立即初始化Sentinel（避免首次访问才初始化）
+#        datasource:
+#          ds1:
+#            nacos:
+#              server-addr: localhost:8848
+#              dataId: ${spring.application.name}-sentinel
+#              groupId: DEFAULT_GROUP
+#              data-type: json
+#              rule-type: flow
+
+
+# MyBatis-Plus配置（简化CRUD，不用写XML）
+mybatis-plus:
+  mapper-locations: classpath*:com/lsx/core/*/mapper/**/*.xml  # Mapper XML路径（适配模块化架构）
+  type-aliases-package: com.lsx.core.user.entity,com.lsx.core.house.entity,com.lsx.core.repair.entity  # 实体类包路径
+  configuration:
+    map-underscore-to-camel-case: true  # 开启下划线转驼峰（比如数据库字段user_name→实体类userName）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL日志（方便调试，MVP阶段必开）
+
+# 日志配置（简化版，只输出核心日志）
+logging:
+  level:
+    root: info  # 根日志级别（info就行，不用debug）
+    com.sky.core.mapper: debug
+
+knife4j:
+  enable: true
+  setting:
+    language: zh-CN
+  openapi:
+    title: 智能知识库系统 API
+    description: 基于Spring Boot和AI的智能问答系统
+    version: 1.0
+    contact:
+      name: lsx
+      email: 2428513271@qq.com
+jwt:
+  secret: "mySecretKeyForJWTGenerationInSmartCommunitySystem2024" # 生产环境要用更复杂的密钥
+  expiration: 86400000 # Token过期时间(毫秒) - 24小时
+
+
+
+
