@@ -29,3 +29,67 @@ INSERT INTO sys_community (name, address, contact, phone) VALUES
 -- INNER JOIN sys_house h ON r.house_id = h.id 
 -- INNER JOIN sys_community c ON h.community_name = c.name 
 -- SET r.community_id = c.id;
+
+-- 7. 在停车订单表 biz_parking_order 中添加 community_id 字段并建立索引
+ALTER TABLE biz_parking_order 
+    ADD COLUMN community_id BIGINT NULL COMMENT '归属社区ID' AFTER id,
+    ADD INDEX idx_parking_order_community (community_id);
+
+-- 8. 通过车位表回填停车订单的 community_id（如果你的车位表已设置 community_id）
+-- UPDATE biz_parking_order o
+-- JOIN biz_parking_space s ON o.space_id = s.id
+-- SET o.community_id = s.community_id
+-- WHERE o.space_id IS NOT NULL;
+
+-- 9. 创建访客表
+CREATE TABLE IF NOT EXISTS sys_visitor (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  community_id BIGINT,
+  visitor_name VARCHAR(50),
+  visitor_phone VARCHAR(30),
+  reason VARCHAR(255),
+  visit_time DATETIME,
+  car_no VARCHAR(20),
+  status VARCHAR(20),
+  audit_remark VARCHAR(255),
+  create_time DATETIME,
+  update_time DATETIME
+) COMMENT='访客预约';
+
+-- 10. 创建投诉表
+CREATE TABLE IF NOT EXISTS sys_complaint (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  community_id BIGINT,
+  type VARCHAR(50),
+  content TEXT,
+  images TEXT,
+  status VARCHAR(20),
+  result TEXT,
+  create_time DATETIME,
+  handle_time DATETIME
+) COMMENT='投诉建议';
+
+-- 11. 创建活动表与报名表
+CREATE TABLE IF NOT EXISTS sys_activity (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  community_id BIGINT,
+  title VARCHAR(100),
+  content TEXT,
+  start_time DATETIME,
+  location VARCHAR(100),
+  max_count INT,
+  signup_count INT DEFAULT 0,
+  status VARCHAR(20),
+  cover_url VARCHAR(255),
+  create_time DATETIME
+) COMMENT='社区活动';
+
+CREATE TABLE IF NOT EXISTS sys_activity_signup (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  activity_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  signup_time DATETIME,
+  UNIQUE KEY uk_activity_user(activity_id, user_id)
+) COMMENT='活动报名';

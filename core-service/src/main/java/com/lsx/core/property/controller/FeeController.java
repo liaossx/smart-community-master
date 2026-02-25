@@ -47,6 +47,17 @@ public class FeeController {
         }
     }
 
+    @GetMapping("/unpaid")
+    @Operation(summary = "查询未缴账单别名")
+    public Result<List<CurrentFeeDTO>> getUnpaidAlias(@RequestParam("userId") Long userId) {
+        try {
+            List<CurrentFeeDTO> result = feeService.getCurrentUnpaid(userId);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.fail("查询失败：" + e.getMessage());
+        }
+    }
+
     /**
      * 业主查询历史缴费记录
      */
@@ -125,6 +136,33 @@ public class FeeController {
         } catch (Exception e) {
             log.error("缴费系统异常", e);
             return Result.fail("缴费失败，请稍后重试");
+        }
+    }
+
+    @PostMapping("/pay")
+    @Operation(summary = "提交物业费缴费别名")
+    public Result<String> payFeePost(@RequestBody PayFeeDTO dto, @RequestParam("userId") Long userId) {
+        try {
+            String result = feeService.payFee(dto, userId);
+            return Result.success(result);
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            return Result.fail("缴费失败，请稍后重试");
+        }
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "管理员查询账单")
+    public Result<Page<com.lsx.core.property.entity.SysFee>> adminList(@RequestParam(value = "status", required = false) String status,
+                                                                       @RequestParam(value = "ownerName", required = false) String ownerName,
+                                                                       @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                                                       @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        try {
+            Page<com.lsx.core.property.entity.SysFee> page = feeService.adminList(status, ownerName, pageNum, pageSize);
+            return Result.success(page);
+        } catch (Exception e) {
+            return Result.fail("查询失败：" + e.getMessage());
         }
     }
 

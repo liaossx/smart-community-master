@@ -32,6 +32,11 @@ public class ParkingSpaceController {
     @GetMapping("/space/remaining")
     @Operation(summary = "查询可用车位数量", description = "支持按小区ID查询，未传则统计全部")
     public Result<ParkingSpaceRemainVO> getRemaining(@RequestParam(value = "communityId", required = false) Long communityId) {
+        String role = UserContext.getRole();
+        Long currentCommunityId = UserContext.getCommunityId();
+        if (!"super_admin".equalsIgnoreCase(role)) {
+            communityId = currentCommunityId;
+        }
         ParkingSpaceRemainVO vo = parkingSpaceService.getRemaining(communityId);
         return Result.success(vo);
     }
@@ -117,6 +122,5 @@ public class ParkingSpaceController {
         }
     }
 }
-
 
 

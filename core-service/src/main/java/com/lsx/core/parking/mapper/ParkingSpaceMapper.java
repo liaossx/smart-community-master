@@ -21,6 +21,9 @@ public interface ParkingSpaceMapper extends BaseMapper<ParkingSpace> {
             "  s.status AS status " +
             "FROM biz_parking_space s " +
             "WHERE s.deleted = 0 " +
+            "<if test='dto.communityId != null'> " +
+            "  AND s.community_id = #{dto.communityId} " +
+            "</if>" +
             "<if test='dto.spaceNo != null and dto.spaceNo != \"\"'> " +
             "  AND s.space_no LIKE CONCAT('%', #{dto.spaceNo}, '%') " +
             "</if>" +

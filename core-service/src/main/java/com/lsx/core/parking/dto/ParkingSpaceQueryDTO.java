@@ -20,4 +20,7 @@ public class ParkingSpaceQueryDTO {
 
     @Schema(description = "车牌号")
     private String plateNo;
+
+    @Schema(description = "社区ID（管理员端按社区隔离）")
+    private Long communityId;
 }

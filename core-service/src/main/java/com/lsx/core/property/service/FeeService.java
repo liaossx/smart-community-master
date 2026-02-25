@@ -23,4 +23,6 @@ public interface FeeService {
     String payFee(PayFeeDTO dto, Long userId);
 
     void payCallback(String orderNo, String tradeNo, String status);
+
+    Page<com.lsx.core.property.entity.SysFee> adminList(String status, String ownerName, Integer pageNum, Integer pageSize);
 }

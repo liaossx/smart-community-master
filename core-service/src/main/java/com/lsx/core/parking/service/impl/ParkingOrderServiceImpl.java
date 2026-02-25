@@ -68,6 +68,19 @@ public class ParkingOrderServiceImpl
 
         order.setOrderNo(generateOrderNo());
         order.setStatus(STATUS_UNPAID);
+        // 设置社区ID：优先取车位的社区；否则取登录上下文的社区
+        if (spaceId != null) {
+            ParkingSpace space = parkingSpaceMapper.selectById(spaceId);
+            if (space != null) {
+                order.setCommunityId(space.getCommunityId());
+            }
+        }
+        if (order.getCommunityId() == null) {
+            Long ctxCommunityId = com.lsx.core.common.Util.UserContext.getCommunityId();
+            if (ctxCommunityId != null) {
+                order.setCommunityId(ctxCommunityId);
+            }
+        }
         order.setCreateTime(LocalDateTime.now());
         order.setUpdateTime(LocalDateTime.now());
 
@@ -93,11 +106,15 @@ public class ParkingOrderServiceImpl
     public IPage<ParkingOrder> adminListOrders(Integer pageNum, Integer pageSize, String plateNo, String status) {
 
         Page<ParkingOrder> page = new Page<>(pageNum, pageSize);
+        String role = com.lsx.core.common.Util.UserContext.getRole();
+        Long currentCommunityId = com.lsx.core.common.Util.UserContext.getCommunityId();
         return this.page(
                 page,
                 Wrappers.<ParkingOrder>lambdaQuery()
                         .like(StringUtils.hasText(plateNo), ParkingOrder::getPlateNo, plateNo)
                         .eq(StringUtils.hasText(status), ParkingOrder::getStatus, status)
+                        .eq(!"super_admin".equalsIgnoreCase(role) && currentCommunityId != null, ParkingOrder::getCommunityId, currentCommunityId)
+                        .eq(!"super_admin".equalsIgnoreCase(role) && currentCommunityId == null, ParkingOrder::getId, -1L)
                         .orderByDesc(ParkingOrder::getCreateTime)
         );
     }
@@ -151,5 +168,4 @@ public class ParkingOrderServiceImpl
                 + RandomUtil.randomNumbers(4);
     }
 }
-
 

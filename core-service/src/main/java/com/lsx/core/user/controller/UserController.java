@@ -22,6 +22,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.Map;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 
 @RestController
@@ -101,6 +103,51 @@ public class UserController {
         return Result.success(dto);
     }
 
+    @Operation(summary = "修改资料")
+    @PutMapping("/profile")
+    public Result<String> updateProfile(@RequestBody Map<String, String> body) {
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.fail("未登录");
+        }
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        String name = body.get("realName");
+        if (name != null && name.trim().length() > 0) {
+            user.setRealName(name.trim());
+        }
+        user.setUpdateTime(java.time.LocalDateTime.now());
+        userService.updateById(user);
+        return Result.success("更新成功");
+        }
+
+    @Operation(summary = "修改密码")
+    @PutMapping("/password")
+    public Result<String> updatePassword(@RequestBody Map<String, String> body) {
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null) {
+            return Result.fail("未登录");
+        }
+        String oldPwd = body.get("oldPassword");
+        String newPwd = body.get("newPassword");
+        if (oldPwd == null || newPwd == null) {
+            return Result.fail("参数不足");
+        }
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
+        boolean ok = BCrypt.checkpw(oldPwd, user.getPassword());
+        if (!ok) {
+            return Result.fail("旧密码错误");
+        }
+        user.setPassword(jwtUtil.encryptPassword(newPwd));
+        user.setUpdateTime(java.time.LocalDateTime.now());
+        userService.updateById(user);
+        return Result.success("修改成功");
+    }
     @Operation(summary = "用户注册")
     @PostMapping("/register")
     public Result<RegisterResult> register(@RequestBody RegisterDto registerDto) {

@@ -3,6 +3,9 @@ package com.lsx.core.property.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.lsx.core.common.Util.UserContext;
+import com.lsx.core.community.entity.Community;
+import com.lsx.core.community.mapper.CommunityMapper;
 import com.lsx.core.house.entity.UserHouse;
 import com.lsx.core.house.mapper.UserHouseMapper;
 import com.lsx.core.house.service.HouseService;
@@ -43,6 +46,8 @@ public class FeeServiceImpl implements FeeService {
     private HouseService houseService;
     @Autowired
     private UserHouseMapper userHouseMapper;
+    @Autowired
+    private CommunityMapper communityMapper;
 
 
     @Override
@@ -179,11 +184,15 @@ public class FeeServiceImpl implements FeeService {
         for (HouseResult house : targetHouses) {
             try {
                 SysFee fee = new SysFee();
-                // 设置房屋关联信息
                 fee.setHouseId(house.getId());
                 fee.setBuildingNo(house.getBuildingNo());
+                if (house.getCommunityName() != null) {
+                    Community c = communityMapper.selectOne(new QueryWrapper<Community>().eq("name", house.getCommunityName()));
+                    if (c != null) {
+                        fee.setCommunityId(c.getId());
+                    }
+                }
 
-                // 设置账单信息
                 fee.setFeeCycle(dto.getFeeCycle());
                 fee.setFeeAmount(house.getArea().multiply(dto.getUnitPrice()).setScale(2, RoundingMode.HALF_UP));
                 fee.setFeeType("物业费");
@@ -310,6 +319,29 @@ public class FeeServiceImpl implements FeeService {
             fee.setUpdateTime(LocalDateTime.now());
             feeMapper.updateById(fee);
         }
+    }
+
+    @Override
+    public Page<SysFee> adminList(String status, String ownerName, Integer pageNum, Integer pageSize) {
+        Page<SysFee> page = new Page<>(pageNum, pageSize);
+        QueryWrapper<SysFee> qw = new QueryWrapper<>();
+        if (StringUtils.isNotBlank(status)) {
+            qw.eq("status", status);
+        }
+        String role = UserContext.getRole();
+        Long communityId = UserContext.getCommunityId();
+        if (!"super_admin".equalsIgnoreCase(role)) {
+            if (communityId != null) {
+                qw.eq("community_id", communityId);
+            } else {
+                qw.eq("id", -1L);
+            }
+        }
+        if (StringUtils.isNotBlank(ownerName)) {
+            qw.inSql("house_id", "SELECT uh.house_id FROM sys_user u JOIN sys_user_house uh ON u.id=uh.user_id WHERE uh.status='审核通过' AND u.real_name LIKE '%" + ownerName + "%'");
+        }
+        qw.orderByDesc("create_time");
+        return feeMapper.selectPage(page, qw);
     }
 
 

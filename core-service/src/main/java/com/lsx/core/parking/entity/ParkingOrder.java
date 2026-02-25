@@ -15,6 +15,7 @@ public class ParkingOrder {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long communityId;
     private String orderNo;
     private Long userId;
     private Long spaceId;

@@ -244,9 +244,20 @@ public class ParkingSpaceServiceImpl
 
     @Override
     public IPage<ParkingSpaceVO> adminListSpaces(ParkingSpaceQueryDTO dto) {
+        String role = com.lsx.core.common.Util.UserContext.getRole();
+        Long currentCommunityId = com.lsx.core.common.Util.UserContext.getCommunityId();
+
+        if (!"super_admin".equalsIgnoreCase(role)) {
+            if (currentCommunityId == null) {
+                // 无社区则查不到任何数据
+                dto.setCommunityId(-1L);
+            } else {
+                // 强制限定为当前社区
+                dto.setCommunityId(currentCommunityId);
+            }
+        }
         Page<ParkingSpaceVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         return parkingSpaceMapper.selectAdminPage(page, dto);
     }
 }
-
 
