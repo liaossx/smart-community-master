@@ -12,8 +12,15 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import com.lsx.core.visitor.dto.VisitorDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class VisitorServiceImpl extends ServiceImpl<SysVisitorMapper, SysVisitor> implements VisitorService {
+    
+    private static final Logger log = LoggerFactory.getLogger(VisitorServiceImpl.class);
+
     @Override
     public Long apply(SysVisitor entity) {
         Long cid = UserContext.getCommunityId();
@@ -32,26 +39,27 @@ public class VisitorServiceImpl extends ServiceImpl<SysVisitorMapper, SysVisitor
     }
 
     @Override
-    public IPage<SysVisitor> adminList(Integer pageNum, Integer pageSize, String status, String keyword) {
-        Page<SysVisitor> page = new Page<>(pageNum, pageSize);
-        QueryWrapper<SysVisitor> qw = new QueryWrapper<>();
+    public IPage<VisitorDTO> adminList(Integer pageNum, Integer pageSize, String status, String keyword) {
+        Page<VisitorDTO> page = new Page<>(pageNum, pageSize);
         String role = UserContext.getRole();
         Long cid = UserContext.getCommunityId();
+        
+        log.info("开始执行 Mapper 查询: communityId={}, role={}, keyword={}, status={}", cid, role, keyword, status);
+        
+        Long filterCid = null;
         if (!"super_admin".equalsIgnoreCase(role)) {
-            if (cid != null) {
-                qw.eq("community_id", cid);
-            } else {
-                qw.eq("id", -1L);
-            }
+            if (cid != null) filterCid = cid;
+            else filterCid = -1L;
         }
-        if (status != null && status.trim().length() > 0) {
-            qw.eq("status", status);
+        
+        try {
+            IPage<VisitorDTO> result = baseMapper.selectAdminList(page, status, keyword, filterCid);
+            log.info("Mapper 查询返回: size={}", result.getRecords().size());
+            return result;
+        } catch (Exception e) {
+            log.error("Mapper 执行失败!", e);
+            throw e;
         }
-        if (keyword != null && keyword.trim().length() > 0) {
-            qw.and(w -> w.like("visitor_name", keyword).or().like("visitor_phone", keyword));
-        }
-        qw.orderByDesc("create_time");
-        return this.page(page, qw);
     }
 
     @Override

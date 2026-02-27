@@ -3,6 +3,7 @@ package com.lsx.core.complaint.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.lsx.core.common.Result.Result;
 import com.lsx.core.complaint.entity.SysComplaint;
+import com.lsx.core.complaint.dto.ComplaintDTO;
 import com.lsx.core.complaint.service.ComplaintService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,11 +35,11 @@ public class ComplaintController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "管理员投诉列表")
-    public Result<IPage<SysComplaint>> adminList(@RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-                                                 @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-                                                 @RequestParam(value = "status", required = false) String status) {
-        IPage<SysComplaint> page = complaintService.adminList(pageNum, pageSize, status);
+    @Operation(summary = "管理员-投诉列表")
+    public Result<IPage<ComplaintDTO>> list(@RequestParam(value = "status", required = false) String status,
+                                            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        IPage<ComplaintDTO> page = complaintService.adminList(pageNum, pageSize, status);
         return Result.success(page);
     }
 

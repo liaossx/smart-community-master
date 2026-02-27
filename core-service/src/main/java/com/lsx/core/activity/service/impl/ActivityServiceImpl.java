@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import com.lsx.core.activity.dto.SignupRecordDTO;
+
 @Service
 public class ActivityServiceImpl extends ServiceImpl<SysActivityMapper, SysActivity> implements ActivityService {
 
@@ -45,12 +47,55 @@ public class ActivityServiceImpl extends ServiceImpl<SysActivityMapper, SysActiv
     @Override
     public Long publish(SysActivity a) {
         Long cid = UserContext.getCommunityId();
-        a.setCommunityId(cid);
-        a.setStatus("ONLINE");
-        a.setSignupCount(0);
-        a.setCreateTime(LocalDateTime.now());
-        this.save(a);
-        return a.getId();
+        
+        if (a.getId() != null) {
+            // 编辑逻辑
+            SysActivity exist = this.getById(a.getId());
+            if (exist == null) {
+                throw new RuntimeException("活动不存在");
+            }
+            
+            // 权限校验：只能编辑本社区活动
+            String role = UserContext.getRole();
+            if (!"super_admin".equalsIgnoreCase(role)) {
+                if (cid != null && !cid.equals(exist.getCommunityId())) {
+                    throw new RuntimeException("无权编辑其他社区活动");
+                }
+            }
+            
+            // 更新允许修改的字段
+            exist.setTitle(a.getTitle());
+            exist.setContent(a.getContent());
+            exist.setStartTime(a.getStartTime());
+            exist.setLocation(a.getLocation());
+            exist.setMaxCount(a.getMaxCount());
+            if (a.getCoverUrl() != null) {
+                 exist.setCoverUrl(a.getCoverUrl());
+            }
+            if (a.getStatus() != null) {
+                exist.setStatus(a.getStatus());
+            }
+            
+            this.updateById(exist);
+            return exist.getId();
+        } else {
+            // 新增逻辑
+            a.setCommunityId(cid);
+            // 如果前端没传状态，默认设为 ONLINE，但根据你的业务需求，这里可以改为 DRAFT
+            // 这里我们信任前端传来的状态 (PUBLISHED 或 DRAFT)
+            // 只有当前端完全没传 status 时，才给一个默认值
+            if (a.getStatus() == null || a.getStatus().trim().isEmpty()) {
+                a.setStatus("PUBLISHED"); // 默认改为 PUBLISHED，或者根据你的需求设为 DRAFT
+            }
+            if (a.getSignupCount() == null) {
+                a.setSignupCount(0);
+            }
+            if (a.getCreateTime() == null) {
+                a.setCreateTime(LocalDateTime.now());
+            }
+            this.save(a);
+            return a.getId();
+        }
     }
 
     @Override
@@ -71,10 +116,22 @@ public class ActivityServiceImpl extends ServiceImpl<SysActivityMapper, SysActiv
     public boolean join(Long activityId, Long userId) {
         SysActivity a = this.getById(activityId);
         if (a == null) throw new RuntimeException("活动不存在");
-        if (!"ONLINE".equals(a.getStatus())) throw new RuntimeException("活动不可报名");
+        
+        // 兼容 ONLINE 和 PUBLISHED 两种状态
+        if (!"ONLINE".equals(a.getStatus()) && !"PUBLISHED".equals(a.getStatus())) {
+             throw new RuntimeException("活动不可报名");
+        }
+        
         if (a.getMaxCount() != null && a.getSignupCount() != null && a.getSignupCount() >= a.getMaxCount()) {
             throw new RuntimeException("名额已满");
         }
+        
+        // 检查是否已报名
+        Long count = signupMapper.selectCount(new QueryWrapper<SysActivitySignup>()
+                .eq("activity_id", activityId)
+                .eq("user_id", userId));
+        if (count > 0) throw new RuntimeException("您已报名该活动");
+
         SysActivitySignup s = new SysActivitySignup();
         s.setActivityId(activityId);
         s.setUserId(userId);
@@ -83,5 +140,25 @@ public class ActivityServiceImpl extends ServiceImpl<SysActivityMapper, SysActiv
         a.setSignupCount(a.getSignupCount() == null ? 1 : a.getSignupCount() + 1);
         this.updateById(a);
         return true;
+    }
+    
+    @Override
+    public IPage<SignupRecordDTO> getSignupList(Long activityId, Integer pageNum, Integer pageSize) {
+        Page<SignupRecordDTO> page = new Page<>(pageNum, pageSize);
+        // 权限校验：只能查看本社区的活动报名（或自己的活动）
+        // 这里简单处理：检查活动是否存在
+        SysActivity a = this.getById(activityId);
+        if (a == null) throw new RuntimeException("活动不存在");
+        
+        // 社区隔离检查
+        String role = UserContext.getRole();
+        Long cid = UserContext.getCommunityId();
+        if (!"super_admin".equalsIgnoreCase(role)) {
+            if (cid != null && !cid.equals(a.getCommunityId())) {
+                 throw new RuntimeException("无权查看其他社区活动报名");
+            }
+        }
+        
+        return signupMapper.selectSignupList(page, activityId);
     }
 }

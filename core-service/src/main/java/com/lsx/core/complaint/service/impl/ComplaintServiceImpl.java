@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import com.lsx.core.complaint.dto.ComplaintDTO;
+
 @Service
 public class ComplaintServiceImpl extends ServiceImpl<SysComplaintMapper, SysComplaint> implements ComplaintService {
     @Override
@@ -31,20 +33,18 @@ public class ComplaintServiceImpl extends ServiceImpl<SysComplaintMapper, SysCom
     }
 
     @Override
-    public IPage<SysComplaint> adminList(Integer pageNum, Integer pageSize, String status) {
-        Page<SysComplaint> page = new Page<>(pageNum, pageSize);
-        QueryWrapper<SysComplaint> qw = new QueryWrapper<>();
+    public IPage<ComplaintDTO> adminList(Integer pageNum, Integer pageSize, String status) {
+        Page<ComplaintDTO> page = new Page<>(pageNum, pageSize);
         String role = UserContext.getRole();
         Long cid = UserContext.getCommunityId();
+        
+        Long filterCid = null;
         if (!"super_admin".equalsIgnoreCase(role)) {
-            if (cid != null) qw.eq("community_id", cid);
-            else qw.eq("id", -1L);
+            if (cid != null) filterCid = cid;
+            else filterCid = -1L; // 没绑定社区的管理员啥也看不到
         }
-        if (status != null && status.trim().length() > 0) {
-            qw.eq("status", status);
-        }
-        qw.orderByDesc("create_time");
-        return this.page(page, qw);
+        
+        return baseMapper.selectAdminList(page, status, filterCid);
     }
 
     @Override

@@ -10,10 +10,9 @@ import com.lsx.core.house.entity.UserHouse;
 import com.lsx.core.house.mapper.UserHouseMapper;
 import com.lsx.core.house.service.HouseService;
 import com.lsx.core.house.vo.HouseResult;
-import com.lsx.core.property.dto.CurrentFeeDTO;
-import com.lsx.core.property.dto.FeeHistoryDTO;
-import com.lsx.core.property.dto.GenerateFeeDTO;
-import com.lsx.core.property.dto.PayFeeDTO;
+import com.lsx.core.notice.dto.NoticeCreateDTO;
+import com.lsx.core.notice.service.NoticeService;
+import com.lsx.core.property.dto.*;
 import com.lsx.core.property.entity.SysFee;
 import com.lsx.core.property.entity.SysFeeRecord;
 import com.lsx.core.property.mapper.SysFeeMapper;
@@ -48,22 +47,99 @@ public class FeeServiceImpl implements FeeService {
     private UserHouseMapper userHouseMapper;
     @Autowired
     private CommunityMapper communityMapper;
+    @Autowired
+    private NoticeService noticeService;
+
+
+    @Override
+    @Transactional
+    public boolean remind(List<Long> feeIds) {
+        if (feeIds == null || feeIds.isEmpty()) {
+            return false;
+        }
+
+        // 1. Query unpaid fees
+        List<SysFee> fees = feeMapper.selectBatchIds(feeIds);
+        if (fees.isEmpty()) {
+            return false;
+        }
+
+        int count = 0;
+        for (SysFee fee : fees) {
+            if (!"UNPAID".equals(fee.getStatus())) {
+                continue;
+            }
+
+            // 2. Find owner
+            QueryWrapper<UserHouse> query = new QueryWrapper<>();
+            query.eq("house_id", fee.getHouseId()).eq("status", "审核通过");
+            List<UserHouse> userHouses = userHouseMapper.selectList(query);
+
+            if (userHouses.isEmpty()) {
+                continue;
+            }
+
+            // Send to all owners
+            boolean sent = false;
+            for (UserHouse uh : userHouses) {
+                NoticeCreateDTO noticeDTO = new NoticeCreateDTO();
+                noticeDTO.setTitle("缴费提醒");
+                noticeDTO.setContent("尊敬的业主，您有一笔物业费（" + fee.getFeeCycle() + "）尚未缴纳，请及时处理。");
+                noticeDTO.setTargetType("USER");
+                noticeDTO.setTargetUserId(uh.getUserId());
+                noticeDTO.setPublishStatus("PUBLISHED");
+
+                // Set community info if available
+                if (fee.getCommunityId() != null) {
+                    noticeDTO.setCommunityId(fee.getCommunityId());
+                    Community c = communityMapper.selectById(fee.getCommunityId());
+                    if (c != null) {
+                        noticeDTO.setCommunityName(c.getName());
+                    }
+                }
+
+                try {
+                    // Assuming current user is admin/operator
+                    // 修改这里：把 .getUserId() 改为 .getCurrentUserId()
+                    Long currentUserId = UserContext.getCurrentUserId();
+                    if (currentUserId == null) currentUserId = 1L; // Fallback to system admin if not logged in (e.g. scheduled task)
+                    noticeService.createNotice(noticeDTO, currentUserId);
+                    sent = true;
+                } catch (Exception e) {
+                    log.error("Failed to send reminder to user {}", uh.getUserId(), e);
+                }
+            }
+
+            // 3. Update remind count
+            if (sent) {
+                if (fee.getRemindCount() == null) {
+                    fee.setRemindCount(0);
+                }
+                fee.setRemindCount(fee.getRemindCount() + 1);
+                feeMapper.updateById(fee);
+                count++;
+            }
+        }
+
+        return count > 0;
+    }
 
 
     @Override
     public List<CurrentFeeDTO> getCurrentUnpaid(Long userId) {
         // 1. 查询用户绑定的房屋ID
         QueryWrapper<UserHouse> userHouseQuery = new QueryWrapper<>();
-        userHouseQuery.eq("user_id", userId).eq("status", "审核通过");  // 修改这里
+        userHouseQuery.eq("user_id", userId).eq("status", "审核通过");
         List<UserHouse> userHouses = userHouseMapper.selectList(userHouseQuery);
 
         if (userHouses.isEmpty()) {
             return Collections.emptyList();
         }
-
+        
         List<Long> houseIds = userHouses.stream()
                 .map(UserHouse::getHouseId)
                 .collect(Collectors.toList());
+        // ... (省略后续代码)
 
         // 2. 查询未缴账单
         QueryWrapper<SysFee> feeQuery = new QueryWrapper<>();
@@ -322,26 +398,18 @@ public class FeeServiceImpl implements FeeService {
     }
 
     @Override
-    public Page<SysFee> adminList(String status, String ownerName, Integer pageNum, Integer pageSize) {
-        Page<SysFee> page = new Page<>(pageNum, pageSize);
-        QueryWrapper<SysFee> qw = new QueryWrapper<>();
-        if (StringUtils.isNotBlank(status)) {
-            qw.eq("status", status);
-        }
+    public Page<FeeDTO> adminList(String status, String ownerName, Integer pageNum, Integer pageSize) {
+        Page<FeeDTO> page = new Page<>(pageNum, pageSize);
         String role = UserContext.getRole();
         Long communityId = UserContext.getCommunityId();
+        
+        Long filterCid = null;
         if (!"super_admin".equalsIgnoreCase(role)) {
-            if (communityId != null) {
-                qw.eq("community_id", communityId);
-            } else {
-                qw.eq("id", -1L);
-            }
+            if (communityId != null) filterCid = communityId;
+            else filterCid = -1L;
         }
-        if (StringUtils.isNotBlank(ownerName)) {
-            qw.inSql("house_id", "SELECT uh.house_id FROM sys_user u JOIN sys_user_house uh ON u.id=uh.user_id WHERE uh.status='审核通过' AND u.real_name LIKE '%" + ownerName + "%'");
-        }
-        qw.orderByDesc("create_time");
-        return feeMapper.selectPage(page, qw);
+        
+        return (Page<FeeDTO>) feeMapper.selectAdminList(page, status, ownerName, filterCid);
     }
 
 

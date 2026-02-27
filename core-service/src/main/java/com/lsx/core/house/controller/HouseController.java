@@ -2,9 +2,11 @@ package com.lsx.core.house.controller;
 
 import com.lsx.core.common.Result.Result;
 import com.lsx.core.common.Util.UserContext;
+import com.lsx.core.house.dto.UserHouseBindDTO;
 import com.lsx.core.house.entity.House;
 import com.lsx.core.house.service.HouseService;
 import com.lsx.core.house.service.UserHouseService;
+import com.lsx.core.user.service.UserService;
 import com.lsx.core.house.vo.HouseResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,9 @@ public class HouseController {
     private HouseService houseService;
     @Resource
     private UserHouseService userhouseService;
+    @Resource
+    private UserService userService;
+
     //管理员查房屋信息
 
     //1,根据id查询房屋信息
@@ -33,6 +38,28 @@ public class HouseController {
         HouseResult houseResult = houseService.getHouseInfoById(houseId);
         return Result.success(houseResult);
     }
+    
+    @Operation(summary = "提交房屋绑定申请")
+    @PostMapping("/bind")
+    public Result<String> bindHouse(@RequestBody UserHouseBindDTO bindDTO) {
+        Long userId = bindDTO.getUserId();
+        // 如果 DTO 中没传 userId，尝试从 UserContext 获取（适配业主端直接调用）
+        if (userId == null) {
+            userId = UserContext.getCurrentUserId();
+        }
+        if (userId == null) {
+            return Result.fail("未登录或参数错误");
+        }
+        
+        Long houseId = bindDTO.getHouseId();
+        try {
+            userService.bindUserToHouse(userId, houseId);
+            return Result.success("绑定申请提交成功");
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     //2，查询全部房屋信息
     @Operation(summary = "查询全部房屋信息")
     @GetMapping("/getAllHouseInfo")

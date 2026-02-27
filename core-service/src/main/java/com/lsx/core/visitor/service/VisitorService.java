@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lsx.core.visitor.entity.SysVisitor;
 
+import com.lsx.core.visitor.dto.VisitorDTO;
+
 public interface VisitorService extends IService<SysVisitor> {
     Long apply(SysVisitor entity);
     IPage<SysVisitor> myList(Long userId, Integer pageNum, Integer pageSize);
-    IPage<SysVisitor> adminList(Integer pageNum, Integer pageSize, String status, String keyword);
+    IPage<VisitorDTO> adminList(Integer pageNum, Integer pageSize, String status, String keyword);
     boolean audit(Long id, String status, String remark);
 }

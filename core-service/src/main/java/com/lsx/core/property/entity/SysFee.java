@@ -22,6 +22,8 @@ public class SysFee {
     private BigDecimal feeAmount;    // 账单金额
     private String feeType = "物业费"; // 费用类型
     private String status = "UNPAID";// 状态（UNPAID/PAID/OVERDUE）
+    
+    private Integer remindCount = 0; // 催缴次数
 
     private LocalDateTime dueDate;  // 彻底改为 String
 

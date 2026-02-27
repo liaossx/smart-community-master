@@ -2,6 +2,7 @@ package com.lsx.core.property.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lsx.core.property.dto.CurrentFeeDTO;
+import com.lsx.core.property.dto.FeeDTO;
 import com.lsx.core.property.dto.FeeHistoryDTO;
 import com.lsx.core.property.dto.GenerateFeeDTO;
 import com.lsx.core.property.dto.PayFeeDTO;
@@ -24,5 +25,6 @@ public interface FeeService {
 
     void payCallback(String orderNo, String tradeNo, String status);
 
-    Page<com.lsx.core.property.entity.SysFee> adminList(String status, String ownerName, Integer pageNum, Integer pageSize);
+    Page<FeeDTO> adminList(String status, String ownerName, Integer pageNum, Integer pageSize);
+    boolean remind(List<Long> feeIds);
 }

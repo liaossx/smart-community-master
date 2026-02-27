@@ -155,6 +155,8 @@ public class NoticeServiceImpl extends ServiceImpl<SysNoticeMapper, SysNotice> i
                         .or(!buildingNos.isEmpty(),
                                 b -> b.eq("target_type", "BUILDING")
                                         .in("building_no", buildingNos))
+                        .or(u -> u.eq("target_type", "USER")
+                                .eq("target_user_id", userId))
                 )
                 // 未过期
                 .and(w -> w.isNull("expire_time")

@@ -3,6 +3,7 @@ package com.lsx.core.property.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.lsx.core.common.Result.Result;
 import com.lsx.core.property.dto.CurrentFeeDTO;
+import com.lsx.core.property.dto.FeeDTO;
 import com.lsx.core.property.dto.FeeHistoryDTO;
 import com.lsx.core.property.dto.GenerateFeeDTO;
 import com.lsx.core.property.dto.PayFeeDTO;
@@ -19,7 +20,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fee")
@@ -153,17 +156,13 @@ public class FeeController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "管理员查询账单")
-    public Result<Page<com.lsx.core.property.entity.SysFee>> adminList(@RequestParam(value = "status", required = false) String status,
-                                                                       @RequestParam(value = "ownerName", required = false) String ownerName,
-                                                                       @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-                                                                       @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        try {
-            Page<com.lsx.core.property.entity.SysFee> page = feeService.adminList(status, ownerName, pageNum, pageSize);
-            return Result.success(page);
-        } catch (Exception e) {
-            return Result.fail("查询失败：" + e.getMessage());
-        }
+    @Operation(summary = "管理员-账单列表")
+    public Result<Page<FeeDTO>> adminList(@RequestParam(value = "status", required = false) String status,
+                                          @RequestParam(value = "ownerName", required = false) String ownerName,
+                                          @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                          @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        Page<FeeDTO> page = feeService.adminList(status, ownerName, pageNum, pageSize);
+        return Result.success(page);
     }
 
     /**
@@ -183,5 +182,29 @@ public class FeeController {
             log.error("支付回调处理失败", e);
             return Result.fail("回调处理失败");
         }
+    }
+
+    /**
+     * 批量催缴接口
+     */
+    @PostMapping("/remind/batch")
+    @Operation(summary = "批量催缴", description = "接收一组账单ID，对这些账单对应的业主发送催缴通知")
+    public Result<String> remindBatch(@RequestBody Map<String, List<Long>> params) {
+        List<Long> ids = params.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return Result.fail("请选择需要催缴的账单");
+        }
+        boolean success = feeService.remind(ids);
+        return success ? Result.success("催缴发送成功") : Result.fail("催缴发送失败，可能账单已缴或未找到业主");
+    }
+
+    /**
+     * 单个催缴接口
+     */
+    @PostMapping("/remind/{id}")
+    @Operation(summary = "单个催缴", description = "对指定ID的账单发送催缴通知")
+    public Result<String> remindSingle(@PathVariable("id") Long id) {
+        boolean success = feeService.remind(Collections.singletonList(id));
+        return success ? Result.success("发送成功") : Result.fail("发送失败");
     }
 }

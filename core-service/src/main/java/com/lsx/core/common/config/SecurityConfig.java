@@ -83,6 +83,20 @@ public class SecurityConfig {
                         .antMatchers("/api/parking/space/admin/**").hasRole("ADMIN") // 车位管理
                         .antMatchers("/api/parking/reserve/admin/**").hasRole("ADMIN") // 车位预订管理
                         .antMatchers("/api/house/updateUserHouseStatus").hasRole("ADMIN")
+                        .antMatchers("/api/fee/list").hasRole("ADMIN") // 费用管理列表
+                        
+                        // 补充 访客、投诉、活动 管理端接口权限
+                        .antMatchers("/api/visitor/list", "/api/visitor/audit").hasRole("ADMIN")
+                        .antMatchers("/api/complaint/list", "/api/complaint/handle").hasRole("ADMIN")
+                        .antMatchers("/api/activity/publish", "/api/activity/list", "/api/activity/signup/list").hasRole("ADMIN")
+                        .antMatchers(org.springframework.http.HttpMethod.GET, "/api/activity/{id}").authenticated()
+                        .antMatchers(org.springframework.http.HttpMethod.DELETE, "/api/activity/{id}").hasRole("ADMIN")
+                        .antMatchers(org.springframework.http.HttpMethod.PUT, "/api/activity").hasRole("ADMIN") // 新增：活动修改接口
+                        
+                        /* ===== 访客、投诉 业主端接口 ===== */
+                        .antMatchers("/api/visitor/apply", "/api/visitor/my").hasRole("OWNER")
+                        .antMatchers("/api/complaint/submit", "/api/complaint/my").hasRole("OWNER")
+                        .antMatchers("/api/activity/join").hasRole("OWNER")
 
                         /* ===== 普通业主（OWNER）可访问 ===== ⭐ 后配置通用路径 */
                         .antMatchers("/api/repair/**").hasRole("OWNER")  // ⭐ 放在后面！

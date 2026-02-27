@@ -45,6 +45,7 @@ public class ActivityController {
     @PostMapping("/publish")
     @Operation(summary = "发布活动")
     public Result<Long> publish(@RequestBody SysActivity body) {
+        System.out.println("Received Activity: " + body);
         Long id = activityService.publish(body);
         return Result.success(id);
     }
@@ -54,5 +55,29 @@ public class ActivityController {
     public Result<Boolean> delete(@PathVariable("id") Long id) {
         boolean ok = activityService.deleteByIdWithCheck(id);
         return ok ? Result.success(true) : Result.fail("删除失败");
+    }
+
+    @GetMapping("/signup/list")
+    @Operation(summary = "活动报名列表")
+    public Result<IPage<com.lsx.core.activity.dto.SignupRecordDTO>> signupList(
+            @RequestParam("activityId") Long activityId,
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+        IPage<com.lsx.core.activity.dto.SignupRecordDTO> page = activityService.getSignupList(activityId, pageNum, pageSize);
+        return Result.success(page);
+    }
+
+    @PutMapping
+    @Operation(summary = "修改活动")
+    public Result<Boolean> update(@RequestBody SysActivity activity) {
+        if (activity.getId() == null) {
+            return Result.fail("活动ID不能为空");
+        }
+        // 复用 publish 方法中的编辑逻辑（因为它已经包含了权限检查和增量更新）
+        // 或者直接调用 service.updateById(activity) 但要注意这会绕过权限检查
+        // 建议：我们在 service 层封装一个安全的 update 方法，或者直接用 publish (因为它兼容了更新)
+        // 既然你明确要 update 接口，我们这里简单包装一下
+        Long id = activityService.publish(activity); 
+        return id != null ? Result.success(true) : Result.fail("更新失败");
     }
 }

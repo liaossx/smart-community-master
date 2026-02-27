@@ -15,7 +15,8 @@ public class SysNotice {
     private Long id;
     private String title;
     private String content;
-    private String targetType;     // ALL / COMMUNITY / BUILDING
+    private String targetType;     // ALL / COMMUNITY / BUILDING / USER
+    private Long targetUserId;     // 指定用户ID
     private Long communityId;      // 指定小区
     private String communityName;
     private String buildingNo;     // 指定楼栋
