@@ -121,6 +121,22 @@ public class ParkingSpaceController {
             return Result.fail("查询失败");
         }
     }
+
+    @GetMapping("/space/available")
+    @Operation(summary = "查询可用固定车位列表", description = "用于业主绑定固定车位时选择，仅返回状态为AVAILABLE且类型为FIXED的车位")
+    public Result<IPage<ParkingSpaceVO>> listAvailableFixedSpaces(
+            @RequestParam(required = false) Long communityId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        
+        // 如果未传 communityId，尝试从当前用户获取
+        if (communityId == null) {
+            communityId = UserContext.getCommunityId();
+        }
+        
+        IPage<ParkingSpaceVO> page = parkingSpaceService.listAvailableFixedSpaces(communityId, pageNum, pageSize);
+        return Result.success(page);
+    }
 }
 
 

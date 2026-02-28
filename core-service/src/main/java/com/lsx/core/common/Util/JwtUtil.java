@@ -114,11 +114,14 @@ public class JwtUtil {
     }
 
     /**
-     * 验证令牌是否有效（用户名匹配+未过期）
+     * 验证令牌是否有效（不查库，仅校验签名和过期时间）
      */
-    public boolean validateToken(String token, User user) {
-        final String username = getUsernameFromToken(token);
-        return (username.equals(user.getUsername()) && !isTokenExpired(token));
+    public boolean validateToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

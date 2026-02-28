@@ -20,6 +20,9 @@ public class Vehicle {
     /** 车主用户ID */
     private Long userId;
 
+    private String brand;  // 品牌
+    private String color;  // 颜色
+
     /** ACTIVE / DISABLED */
     private String status;
 

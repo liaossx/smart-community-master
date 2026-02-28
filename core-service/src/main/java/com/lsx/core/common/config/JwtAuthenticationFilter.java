@@ -69,12 +69,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = request.getHeader("Authorization");
 
         try {
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            
             if (token == null || token.trim().isEmpty()) {
+                // 如果是白名单路径，直接放行，不抛异常
+                boolean isWhite = false;
+                for (String whitePath : WHITE_LIST) {
+                    if (pathMatcher.match(whitePath, requestURI)) {
+                        isWhite = true;
+                        break;
+                    }
+                }
+                if (isWhite) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 throw new RuntimeException("请先登录（Token 不存在）");
             }
-
-            if (token.startsWith("Bearer ")) {
-                token = token.substring(7);
+            
+            // 验证Token
+            if (!jwtUtil.validateToken(token)) {
+                 throw new RuntimeException("Token 已过期或无效");
             }
 
             // ---- 1. 从 token 中解析 userId
@@ -94,28 +111,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // ---- 2. 解析用户名
             String username = jwtUtil.getUsernameFromToken(token);
+            
+            // ... (rest of the code)
             if (username == null || username.trim().isEmpty()) {
                 throw new RuntimeException("Token 中未包含有效用户名");
             }
 
+            // ... (rest of the code)
+            
             // ---- 3. 查询数据库用户
-            LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+            /*LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(User::getUsername, username);
             User user = userMapper.selectOne(queryWrapper);
             if (user == null) {
                 throw new RuntimeException("Token 对应的用户不存在");
-            }
+            }*/
 
             // ---- 4. 验证 token 是否有效
-            if (!jwtUtil.validateToken(token, user)) {
+            /*if (!jwtUtil.validateToken(token, user)) {
                 throw new RuntimeException("Token 已过期或无效，请重新登录");
-            }
+            }*/
 
-            // ---- 5. 设置权限 ⭐⭐⭐ 修复这里！
-            Claims claims = Jwts.parser().setSigningKey(jwtUtil.getSecret()).parseClaimsJws(token).getBody();
-            String role = claims.get("role", String.class);
-
-            // ✅ 关键修复：确保权限字符串有 ROLE_ 前缀
+            // ---- 5. 设置权限
+            String role = roleStr;
+            
             String authority;
             if (role == null || role.trim().isEmpty()) {
                 authority = "ROLE_USER"; // 默认角色
@@ -138,14 +157,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // ---- 6.继续执行
             filterChain.doFilter(request, response);
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            // 认证相关异常，返回 401
+            logger.warn("认证失败: " + e.getMessage());
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             PrintWriter out = response.getWriter();
             out.write("{\"code\":401,\"msg\":\"" + e.getMessage() + "\",\"data\":null}");
             out.flush();
             out.close();
-
+        } catch (Exception e) {
+            // 其他未知异常（如SQL报错、空指针等），打印堆栈并返回 500
+            logger.error("系统内部异常", e);
+            response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            PrintWriter out = response.getWriter();
+            out.write("{\"code\":500,\"msg\":\"系统内部错误：" + e.getMessage() + "\",\"data\":null}");
+            out.flush();
+            out.close();
         } finally {
             UserContext.clear();
         }

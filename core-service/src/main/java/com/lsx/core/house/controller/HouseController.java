@@ -1,5 +1,6 @@
 package com.lsx.core.house.controller;
 
+
 import com.lsx.core.common.Result.Result;
 import com.lsx.core.common.Util.UserContext;
 import com.lsx.core.house.dto.UserHouseBindDTO;

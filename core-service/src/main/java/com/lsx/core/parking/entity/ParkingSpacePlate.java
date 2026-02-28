@@ -16,6 +16,7 @@ public class ParkingSpacePlate {
     private String plateNo;
     private Long userId;
     private String status;
+    private String rejectReason; // 拒绝原因
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

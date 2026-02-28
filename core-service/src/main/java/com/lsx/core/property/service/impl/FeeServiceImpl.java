@@ -210,6 +210,7 @@ public class FeeServiceImpl implements FeeService {
             SysFee fee = feeMap.get(record.getFeeId());
             if (fee != null) {
                 dto.setFeeCycle(fee.getFeeCycle());
+                dto.setFeeType(fee.getFeeType());
             }
 
             return dto;

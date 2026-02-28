@@ -24,6 +24,8 @@ public interface ParkingSpaceService extends IService<ParkingSpace> {
     IPage<ParkingAuthorizeVO> listMyAuthorizes(Long userId, Integer pageNum, Integer pageSize);
 
     IPage<ParkingSpaceVO> adminListSpaces(com.lsx.core.parking.dto.ParkingSpaceQueryDTO dto);
+
+    IPage<ParkingSpaceVO> listAvailableFixedSpaces(Long communityId, Integer pageNum, Integer pageSize);
 }
 
 

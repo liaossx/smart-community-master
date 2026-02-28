@@ -259,5 +259,27 @@ public class ParkingSpaceServiceImpl
         Page<ParkingSpaceVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         return parkingSpaceMapper.selectAdminPage(page, dto);
     }
+
+    @Override
+    public IPage<ParkingSpaceVO> listAvailableFixedSpaces(Long communityId, Integer pageNum, Integer pageSize) {
+        Page<ParkingSpace> page = new Page<>(pageNum, pageSize);
+        
+        LambdaQueryWrapper<ParkingSpace> query = Wrappers.lambdaQuery();
+        query.eq(ParkingSpace::getStatus, SPACE_AVAILABLE)
+             .eq(ParkingSpace::getSpaceType, SPACE_FIXED);
+             
+        if (communityId != null) {
+            query.eq(ParkingSpace::getCommunityId, communityId);
+        }
+        
+        IPage<ParkingSpace> spacePage = parkingSpaceMapper.selectPage(page, query);
+        
+        return spacePage.convert(space -> {
+            ParkingSpaceVO vo = new ParkingSpaceVO();
+            BeanUtil.copyProperties(space, vo);
+            vo.setSlot(space.getSpaceNo());
+            return vo;
+        });
+    }
 }
 
